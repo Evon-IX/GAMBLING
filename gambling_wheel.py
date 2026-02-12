@@ -1,66 +1,81 @@
 import pygame
 import random
 
-# Initializing Pygame
-pygame.init()
-
-# Screen dimensions
+# Constants and Settings
 WIDTH, HEIGHT = 800, 600
+FPS = 60
+jackpot_base = 239
+max_jackpot_probability = 1 / 25
+start_money = 777
+money = start_money
+
+# State Management
+state = "menu"
+spin_result = None
+spins = []
+jackpot_thresholds = {}  # To track jackpot states
+
+# Initialize Pygame
+pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption('Gambling Wheel')
+pygame.display.set_caption("Gambling Wheel")
+clock = pygame.time.Clock()
 
-# Colors
-WHITE = (255, 255, 255)
-GREEN = (0, 255, 0)
-RED = (255, 0, 0)
+# UI setup
+font = pygame.font.Font(None, 36)
 
-# Game variables
-WHEEL_NUMBERS = list(range(0, 37))  # 0-36 numbers
-JACKPOT_NUMBER = 7                  # Jackpot on number 7
-SPINNING_SPEED = 5                   # Base spin speed
+# Function to calculate jackpot probability
+def jackpot_probability(k):
+    p_k = 1 / (jackpot_base - 8 * k)
+    return min(p_k, max_jackpot_probability)
 
-class GamblingWheel:
-    def __init__(self):
-        self.angle = 0
-        self.spin_speed = SPINNING_SPEED
-        self.jackpot_count = 0
+# Function to spin the wheel
+def spin_wheel():
+    global money, spins, spin_result
+    if money <= 0:
+        reset_game()
+        return
+    spin_result = random.randint(0, 36)  # Simulating a standard wheel
+    spins.append(spin_result)
+    money -= 10  # Cost to spin
 
-    def spin_wheel(self):
-        # Increase spin speed for odd numbers
-        if random.choice(WHEEL_NUMBERS) % 2 != 0:
-            self.spin_speed += 2
-        self.angle += self.spin_speed
-        self.angle = self.angle % 360  # Looping angle
+    # Check for jackpot
+    if random.random() < jackpot_probability(spin_result):
+        money += 100  # Jackpot payout
+        reset_game()
 
-        # Check jackpot condition
-        landed_number = random.choice(WHEEL_NUMBERS)
-        if landed_number == JACKPOT_NUMBER:
-            self.jackpot_count += 1
-            print('Jackpot! You hit the jackpot on number', landed_number)
-        return landed_number
+# Reset the game
+def reset_game():
+    global money, spins
+    money = start_money
+    spins = [] 
 
-    def draw_wheel(self):
-        # Drawing code here (wheel visuals - placeholder)
-        pygame.draw.circle(screen, GREEN, (WIDTH // 2, HEIGHT // 2), 200)
-        # More drawing logic...
-
-    def reset_speed(self):
-        self.spin_speed = SPINNING_SPEED
-
-# Main game loop
-if __name__ == '__main__':
-    wheel = GamblingWheel()
+# Function to manage the game loop
+def game_loop():
+    global state
     running = True
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    spin_wheel()  # Spin when space is pressed
 
-        screen.fill(WHITE)
-        wheel.draw_wheel()
-        landed_number = wheel.spin_wheel()  # Spin the wheel each frame
-        print('Landed on:', landed_number)
+        screen.fill((0, 128, 0))  # Green background
+        draw_ui()
         pygame.display.flip()
-        pygame.time.delay(500)  # Delay for visual slowing
+        clock.tick(FPS)
 
     pygame.quit()
+
+# Function to draw UI
+def draw_ui():
+    money_text = font.render(f"Money: ${money}", True, (255, 255, 255))
+    spins_text = font.render(f"Last Spins: {spins[-5:]}", True, (255, 255, 255))
+    screen.blit(money_text, (20, 20))
+    screen.blit(spins_text, (20, 60))
+
+# Start the game
+if __name__ == "__main__":
+    game_loop()
